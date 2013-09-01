@@ -49,6 +49,12 @@
           (eq? '* (s-exp->symbol (first (s-exp->list s)))))
      (multC (parse (second (s-exp->list s)))
             (parse (third (s-exp->list s))))]
+    ; (double x)
+    [(and (s-exp-list? s)
+          (= 2 (length (s-exp->list s)))
+          (s-exp-symbol? (first (s-exp->list s))))
+     (appC (s-exp->symbol (first (s-exp->list s)))
+           (parse (second (s-exp->list s))))]
     [else (error 'parse "invalid input")]))
     
 (define (parse-fundef [s : s-expression]) : FunDefC
@@ -79,16 +85,19 @@
     [multC (l r) (* (interp l fds) (interp r fds))]))
 
 (define double-def
-  (fdC 'double 'x (plusC (idC 'x) (idC 'x))))
+  (parse-fundef '(define (double x) (+ x x))))
+  
 (define quadruple-def
-  (fdC 'quadruple 'x (appC 'double (appC 'double (idC 'x)))))
+  (parse-fundef '(define (quadruple-def x) (double (double x)))))
 
-(define foo (plusC 
-         (appC 'double 
-               (numC 5)) 
-         (numC 4))) 
-(interp (plusC 
-         (appC 'double 
-               (numC 5)) 
-         (numC 4)) 
-        (list double-def))
+(test
+ (parse-fundef '(define (double x) (+ x x)))
+ (fdC 'double 'x (plusC (idC 'x) (idC 'x))))
+
+(test 
+ (parse-fundef '(define (quadruple x) (double (double x))))
+ (fdC 'quadruple 'x (appC 'double (appC 'double (idC 'x)))))
+
+(test 
+ (interp (parse '(double 9)) (list double-def))
+ 18)
